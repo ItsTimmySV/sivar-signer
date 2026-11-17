@@ -531,6 +531,28 @@
       transform: translateY(-1px);
     }
 
+    .btn-broadcast-tx {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      color: #ffffff;
+      font-weight: 800;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      padding: 12px 20px;
+      border-radius: 10px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      transition: all 0.2s ease;
+      box-shadow: 0 4px 14px rgba(16, 185, 129, 0.3);
+    }
+
+    .btn-broadcast-tx:hover {
+      background: linear-gradient(135deg, #34d399 0%, #10b981 100%);
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px rgba(16, 185, 129, 0.45);
+    }
+
     /* EVENT CONSOLE */
     .console-terminal {
       background: #030508;
@@ -769,6 +791,31 @@
             <button class="aux-btn" onclick="copySigned()">
               <span>📋 Copiar Texto Base64</span>
             </button>
+            <button class="btn-broadcast-tx" onclick="confirmBroadcast()">
+              <span>🚀 Transmitida con Éxito (Limpiar Formulario)</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- BROADCAST CONFIRMATION DRAWER -->
+        <div id="broadcastSuccessBox" class="result-drawer" style="border-color: rgba(16, 185, 129, 0.45); background: linear-gradient(180deg, rgba(16, 185, 129, 0.12) 0%, rgba(11, 15, 25, 0.95) 100%); display: none;">
+          <div class="result-header">
+            <div class="result-badge">
+              <span>🎉</span>
+              <span>¡Transacción Transmitida a la Red Bitcoin!</span>
+            </div>
+            <span style="font-size: 11px; color: var(--success);">En espera de confirmación minera</span>
+          </div>
+          <p style="font-size: 13px; color: var(--text-muted); line-height: 1.5;">
+            Tu transacción ha sido emitida a los mineros. El formulario ha sido limpiado automáticamente para proteger tus UTXOs gastados contra intentos accidentales de doble gasto.
+          </p>
+          <div id="txidLinkContainer" style="display: none; padding: 10px 14px; background: rgba(0, 0, 0, 0.4); border-radius: 8px; border: 1px solid var(--border); font-size: 12px; font-family: var(--mono); word-break: break-all;">
+            <span style="color: var(--text-dim);">TXID: </span><a id="txidLink" href="#" target="_blank" style="color: #60a5fa; text-decoration: underline;"></a>
+          </div>
+          <div style="display: flex; gap: 10px; margin-top: 6px;">
+            <button class="aux-btn" onclick="closeBroadcastSuccess()">
+              <span>+ Preparar Nuevo Retiro</span>
+            </button>
           </div>
         </div>
       </section>
@@ -825,6 +872,8 @@
     let usbPort = null, usbReader = null, usbWriter = null, keepUsbReading = false;
     let bleDevice = null, bleServer = null, bleRxChar = null, bleTxChar = null;
     let incomingBuffer = "";
+    let unsignedPsbt = null;
+    let signedPsbt = null;
 
     function log(msg) {
       const el = document.getElementById("logBox");
@@ -858,7 +907,13 @@
       badge.className = "live-status live-disconnected";
       document.getElementById("connText").textContent = "DESCONECTADO";
       document.getElementById("btnZpub").disabled = true;
-      document.getElementById("btnSign").disabled = true;
+
+      const btnSign = document.getElementById("btnSign");
+      btnSign.disabled = true;
+      if (btnSign.innerHTML.includes("Esperando")) {
+        btnSign.innerHTML = '<span>⚡ Reintentar Firma en ESP32</span>';
+        btnSign.style.opacity = '1';
+      }
 
       const bBle = document.getElementById("btnBle");
       bBle.classList.remove("active");
@@ -1025,6 +1080,14 @@
 
       if (line.startsWith("SIGNED_PSBT:")) {
         const signed = line.substring(12).trim();
+        signedPsbt = signed;
+        unsignedPsbt = null;
+
+        const btnSign = document.getElementById("btnSign");
+        btnSign.disabled = (connMode === null);
+        btnSign.innerHTML = '<span>⚡ Enviar a ESP32 y Autorizar con PIN</span>';
+        btnSign.style.opacity = '1';
+
         const drawer = document.getElementById("resultBox");
         drawer.style.display = "flex";
         document.getElementById("psbtOutput").value = signed;
@@ -1055,12 +1118,34 @@
         alert("🔒 EXPORTACIÓN DE ZPUB BLOQUEADA POR SEGURIDAD\n\nEl ESP32 protege tu privacidad evitando la lectura remota del ZPUB.\n\nPara autorizar la exportación:\n1. En la pantalla del ESP32, navega hasta el código QR de ZPUB.\n2. Mantén presionado el botón físico hasta ver 'AUTORIZADO (30s)'.\n3. Vuelve a presionar 'Obtener ZPUB' aquí en la web.");
         log("⚠️ Exportación ZPUB bloqueada: Requiere autorización física en el botón del ESP32.");
       } else if (line === "ERROR:CANCELLED_BY_USER") {
-        alert("Firma cancelada físicamente en el botón del ESP32.");
+        handleSigningError("ERROR:CANCELLED_BY_USER", "⚠️ Firma cancelada en el botón físico del ESP32.\n\nLos datos del retiro se mantienen intactos si deseas reintentar.");
       } else if (line === "ERROR:WRONG_PIN") {
-        alert("PIN incorrecto introducido en el ESP32.");
+        handleSigningError("ERROR:WRONG_PIN", "❌ Firma fallida: PIN incorrecto introducido en el ESP32.\n\nLos datos del retiro se mantienen intactos. Vuelve a activar el Bluetooth en la placa y pulsa 'Reintentar'.");
+      } else if (line === "ERROR:ZERO_INPUTS_SIGNED") {
+        handleSigningError("ERROR:ZERO_INPUTS_SIGNED", "❌ Firma fallida: La billetera no firmó ningún input.\n\nVerifica si la Passphrase (palabra 25) o la semilla en el ESP32 coinciden con la billetera emisora. Los datos se mantienen intactos para reintentar.");
+      } else if (line === "ERROR:INVALID_PSBT") {
+        handleSigningError("ERROR:INVALID_PSBT", "❌ El ESP32 rechazó el PSBT por ser inválido o corrupto.\n\nLos datos se mantienen intactos.");
       } else if (line.includes("PSBT_LOADED")) {
         log("Transacción cargada en el ESP32. Revisa pantalla y pon tu PIN.");
       }
+    }
+
+    function handleSigningError(errCode, msg) {
+      // 1. Limpiar únicamente el buffer temporal del PSBT no firmado
+      unsignedPsbt = null;
+
+      // 2. Restaurar botón principal de firma/envío quitando bloqueo / spinner
+      const btnSign = document.getElementById("btnSign");
+      btnSign.disabled = (connMode === null);
+      btnSign.innerHTML = '<span>⚡ Reintentar Firma en ESP32</span>';
+      btnSign.style.opacity = '1';
+
+      // 3. Ocultar resultado previo si lo hubiera
+      document.getElementById("resultBox").style.display = "none";
+
+      // 4. Mostrar log y alerta clara sin tocar los inputs del formulario
+      log(`${errCode}: Inputs del formulario preservados para reintento.`);
+      alert(msg);
     }
 
     async function fetchZpub() {
@@ -1078,9 +1163,25 @@
         alert("Formato PSBT inválido. Debe comenzar con cHNidP8...");
         return;
       }
+
+      unsignedPsbt = b64;
       document.getElementById("resultBox").style.display = "none";
+      if (document.getElementById("broadcastSuccessBox")) {
+        document.getElementById("broadcastSuccessBox").style.display = "none";
+      }
+
+      const btnSign = document.getElementById("btnSign");
+      btnSign.disabled = true;
+      btnSign.innerHTML = '<span>⏳ Esperando confirmación y PIN en ESP32...</span>';
+      btnSign.style.opacity = '0.75';
+
       log(`Transmitiendo PSBT (${b64.length} bytes) al ESP32...`);
-      await sendData("PSBT:" + b64 + "\n");
+      try {
+        await sendData("PSBT:" + b64 + "\n");
+      } catch (err) {
+        log("Error al transmitir PSBT: " + err.message);
+        handleSigningError("ERROR:COMM_FAIL", "Fallo al enviar los datos al ESP32: " + err.message + "\n\nLos datos se conservan. Reconecta y reintenta.");
+      }
     }
 
     function copySigned() {
@@ -1108,10 +1209,74 @@
       URL.revokeObjectURL(url);
     }
 
+    function confirmBroadcast() {
+      const txidPrompt = prompt("¿Deseas registrar el TXID de la transacción transmitida? (Opcional, déjalo en blanco si transmitiste desde BlueWallet / Sparrow):");
+      const txid = txidPrompt ? txidPrompt.trim() : "";
+      handleBroadcastSuccess(txid);
+    }
+
+    function handleBroadcastSuccess(txid) {
+      // 1. Limpiar por completo los inputs del formulario
+      document.getElementById("psbtInput").value = "";
+      document.getElementById("psbtOutput").value = "";
+      if (document.getElementById("destAddress")) document.getElementById("destAddress").value = "";
+      if (document.getElementById("amountInput")) document.getElementById("amountInput").value = "";
+      if (document.getElementById("feeInput")) document.getElementById("feeInput").value = "";
+
+      // 2. Limpiar variables en memoria
+      unsignedPsbt = null;
+      signedPsbt = null;
+
+      // 3. Resetear botón principal
+      const btnSign = document.getElementById("btnSign");
+      btnSign.disabled = (connMode === null);
+      btnSign.innerHTML = '<span>⚡ Enviar a ESP32 y Autorizar con PIN</span>';
+      btnSign.style.opacity = '1';
+
+      // 4. Ocultar resultBox y mostrar notificación de éxito con enlace explorer
+      document.getElementById("resultBox").style.display = "none";
+      const box = document.getElementById("broadcastSuccessBox");
+      if (box) {
+        box.style.display = "flex";
+        if (txid && txid.length >= 10) {
+          document.getElementById("txidLinkContainer").style.display = "block";
+          const a = document.getElementById("txidLink");
+          a.href = `https://mempool.space/tx/${txid}`;
+          a.textContent = txid;
+        } else {
+          document.getElementById("txidLinkContainer").style.display = "none";
+        }
+      }
+
+      // 5. Refrescar saldo y UTXOs si existen funciones del entorno
+      if (typeof refreshWalletBalance === 'function') try { refreshWalletBalance(); } catch(e){}
+      if (typeof refreshUtxos === 'function') try { refreshUtxos(); } catch(e){}
+      if (typeof updateWalletState === 'function') try { updateWalletState(); } catch(e){}
+
+      log("🎉 Transacción transmitida a la red con éxito. Formulario limpiado para el próximo retiro.");
+    }
+
+    function closeBroadcastSuccess() {
+      const box = document.getElementById("broadcastSuccessBox");
+      if (box) box.style.display = "none";
+    }
+
     function clearFields() {
       document.getElementById("psbtInput").value = "";
       document.getElementById("psbtOutput").value = "";
+      if (document.getElementById("destAddress")) document.getElementById("destAddress").value = "";
+      if (document.getElementById("amountInput")) document.getElementById("amountInput").value = "";
+      if (document.getElementById("feeInput")) document.getElementById("feeInput").value = "";
+      unsignedPsbt = null;
+      signedPsbt = null;
       document.getElementById("resultBox").style.display = "none";
+      const box = document.getElementById("broadcastSuccessBox");
+      if (box) box.style.display = "none";
+
+      const btnSign = document.getElementById("btnSign");
+      btnSign.disabled = (connMode === null);
+      btnSign.innerHTML = '<span>⚡ Enviar a ESP32 y Autorizar con PIN</span>';
+      btnSign.style.opacity = '1';
     }
 
     function toggleSecGuide() {
