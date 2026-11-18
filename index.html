@@ -3,67 +3,76 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sivar Cold Wallet — Consola de Firma PSBT Bitcoin</title>
+  <title>Sivar Cold Wallet — Hardware Signing Suite & Cold Swap</title>
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64' fill='none'><rect width='64' height='64' rx='16' fill='%230052FF'/><path d='M42 20C42 15.0294 37.9706 11 33 11H25C19.4772 11 15 15.4772 15 21C15 26.5228 19.4772 31 25 31H39C44.5228 31 49 35.4772 49 41C49 46.5228 44.5228 51 39 51H31C26.0294 51 22 46.9706 22 42' stroke='%23FFFFFF' stroke-width='6.5' stroke-linecap='round' stroke-linejoin='round'/><circle cx='32' cy='31' r='4' fill='%230052FF' stroke='%23FFFFFF' stroke-width='1.5'/></svg>">
   <script src="qrcode.min.js"></script>
 
   <style>
     :root {
-      --bg: #06080d;
-      --surface: #0b0f19;
-      --surface-raised: #111726;
-      --surface-hover: #161e31;
-      --border: #1a2337;
-      --border-focus: #0052ff;
+      --bg: #07090e;
+      --surface: #10141e;
+      --surface-raised: #151b28;
+      --surface-elevated: #1b2335;
+      --surface-hover: #222c42;
+      --border: rgba(255, 255, 255, 0.08);
+      --border-strong: rgba(255, 255, 255, 0.16);
+
+      --btc: #0052ff;
+      --btc-glow: rgba(0, 82, 255, 0.25);
       --blue: #0052ff;
       --blue-glow: rgba(0, 82, 255, 0.25);
-      --btc: #f7931a;
-      --btc-glow: rgba(247, 147, 26, 0.22);
-      --text: #f1f5f9;
-      --text-muted: #8b9bb4;
-      --text-dim: #4d5b75;
+      --accent: #38bdf8;
       --success: #10b981;
-      --success-glow: rgba(16, 185, 129, 0.2);
-      --danger: #f43f5e;
-      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-      --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      --success-glow: rgba(16, 185, 129, 0.25);
+      --danger: #ef4444;
+
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --text-dim: #64748b;
+
+      --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      --mono: ui-monospace, "SFMono-Regular", SFMono, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
+
     body {
       background-color: var(--bg);
       background-image: 
-        radial-gradient(ellipse 80% 50% at 50% -20%, rgba(0, 82, 255, 0.15), transparent 70%),
-        radial-gradient(circle at 90% 85%, rgba(247, 147, 26, 0.05), transparent 40%);
+        radial-gradient(circle at 50% 0%, rgba(0, 82, 255, 0.12) 0%, transparent 60%),
+        radial-gradient(circle at 85% 90%, rgba(0, 82, 255, 0.05) 0%, transparent 40%);
+      background-repeat: no-repeat;
       color: var(--text);
       font-family: var(--sans);
+      letter-spacing: -0.015em;
+      -webkit-font-smoothing: antialiased;
       min-height: 100vh;
       display: flex;
       flex-direction: column;
       align-items: center;
-      padding: 20px 14px 40px;
-      -webkit-font-smoothing: antialiased;
+      padding: 16px 14px 40px;
     }
 
     .app-shell {
-      max-width: 760px;
+      max-width: 860px;
       width: 100%;
       display: flex;
       flex-direction: column;
-      gap: 20px;
+      gap: 16px;
     }
 
-    /* TOP HEADER & NAVBAR */
-    .nav-bar {
+    /* ================= HEADER SUITE ================= */
+    .top-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 14px 18px;
-      background: rgba(11, 15, 25, 0.85);
+      padding: 14px 20px;
+      background: var(--surface);
       border: 1px solid var(--border);
       border-radius: 16px;
-      backdrop-filter: blur(16px);
-      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.5);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.45);
+      flex-wrap: wrap;
+      gap: 12px;
     }
 
     .brand-wrap {
@@ -74,36 +83,99 @@
       color: inherit;
     }
 
-    .brand-shield {
+    .brand-badge {
       width: 40px;
       height: 40px;
       border-radius: 11px;
-      background: linear-gradient(135deg, #0052ff 0%, #0036a8 100%);
+      background: linear-gradient(135deg, #0052ff 0%, #002b80 100%);
       display: flex;
       align-items: center;
       justify-content: center;
-      box-shadow: 0 0 20px var(--blue-glow);
-      border: 1px solid rgba(255, 255, 255, 0.2);
+      box-shadow: 0 0 16px var(--blue-glow);
+      border: 1px solid rgba(255, 255, 255, 0.15);
       flex-shrink: 0;
     }
 
-    .brand-text h2 {
-      font-size: 17px;
+    .brand-meta h1 {
+      font-size: 15px;
       font-weight: 800;
-      letter-spacing: -0.4px;
-      color: #ffffff;
-      line-height: 1.1;
+      letter-spacing: 0.4px;
+      text-transform: uppercase;
+      display: flex;
+      align-items: center;
+      gap: 6px;
     }
 
-    .brand-text h2 span {
-      color: #3880ff;
+    .brand-meta h1 span.accent {
+      color: #38bdf8;
     }
 
-    .brand-text p {
+    .brand-meta p {
       font-size: 11px;
       font-weight: 600;
       color: var(--text-muted);
-      letter-spacing: 0.3px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .privacy-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 6px;
+      background: rgba(16, 185, 129, 0.1);
+      border: 1px solid rgba(16, 185, 129, 0.25);
+      color: var(--success);
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-left: auto;
+    }
+
+    .hw-status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      font-family: var(--mono);
+      font-variant-numeric: tabular-nums;
+      font-weight: 600;
+      padding: 7px 14px;
+      border-radius: 20px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--border);
+      color: var(--text-dim);
+    }
+
+    .hw-status-pill.connected {
+      background: rgba(16, 185, 129, 0.12);
+      border-color: rgba(16, 185, 129, 0.45);
+      color: var(--success);
+    }
+
+    .pulse-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+
+    .hw-status-pill.connected .pulse-dot {
+      box-shadow: 0 0 10px var(--success);
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.85); }
+      100% { opacity: 1; transform: scale(1); }
     }
 
     .exchange-cta {
@@ -111,10 +183,10 @@
       align-items: center;
       gap: 6px;
       padding: 8px 14px;
-      background: rgba(0, 82, 255, 0.1);
-      border: 1px solid rgba(0, 82, 255, 0.35);
+      background: rgba(0, 82, 255, 0.12);
+      border: 1px solid rgba(0, 82, 255, 0.4);
       border-radius: 10px;
-      color: #60a5fa;
+      color: #93c5fd;
       font-size: 12px;
       font-weight: 700;
       text-decoration: none;
@@ -128,134 +200,93 @@
       transform: translateY(-1px);
     }
 
-    /* HERO INTRO */
-    .hero-meta {
+    /* ================= TABS NAVIGATION (SUITE INSTITUCIONAL) ================= */
+    .suite-nav {
       display: flex;
-      flex-direction: column;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 6px;
       gap: 6px;
-      padding: 4px 4px 0;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
     }
 
-    .hero-title-row {
+    .nav-tab {
+      flex: 1;
       display: flex;
       align-items: center;
-      justify-content: space-between;
-      flex-wrap: wrap;
-      gap: 10px;
-    }
-
-    .hero-title-row h1 {
-      font-size: 24px;
-      font-weight: 800;
-      letter-spacing: -0.5px;
-      color: #ffffff;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .badge-protocol {
-      font-family: var(--mono);
-      font-size: 11px;
-      font-weight: 700;
-      background: rgba(247, 147, 26, 0.12);
-      border: 1px solid rgba(247, 147, 26, 0.3);
-      color: var(--btc);
-      padding: 4px 10px;
-      border-radius: 8px;
-      letter-spacing: 0.5px;
-    }
-
-    .hero-meta p {
-      color: var(--text-muted);
+      justify-content: center;
+      gap: 8px;
+      padding: 11px 16px;
+      border-radius: 10px;
       font-size: 13px;
-      line-height: 1.5;
+      font-weight: 700;
+      color: var(--text-muted);
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      font-family: var(--sans);
+      transition: all 0.2s ease;
     }
 
-    /* HARDWARE BRIDGE INTERFACE */
-    .console-panel {
+    .nav-tab:hover {
+      color: var(--text);
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    .nav-tab.active {
+      color: #ffffff;
+      background: var(--surface-elevated);
+      border: 1px solid var(--border-strong);
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+    }
+
+    .nav-tab.active.accent-btc {
+      border-color: rgba(0, 82, 255, 0.5);
+      background: linear-gradient(180deg, rgba(0, 82, 255, 0.16) 0%, rgba(28, 35, 53, 0.9) 100%);
+    }
+
+    .nav-tab.active.accent-swap {
+      border-color: rgba(0, 82, 255, 0.5);
+      background: linear-gradient(180deg, rgba(0, 82, 255, 0.16) 0%, rgba(28, 35, 53, 0.9) 100%);
+    }
+
+    .badge-tab-tag {
+      font-size: 10px;
+      font-weight: 800;
+      padding: 2px 6px;
+      border-radius: 5px;
+      background: rgba(0, 82, 255, 0.2);
+      color: #38bdf8;
+    }
+
+    /* ================= TAB PANELS ================= */
+    .tab-panel {
+      display: none;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .tab-panel.active {
+      display: flex;
+    }
+
+    .card {
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: 18px;
       padding: 22px;
-      box-shadow: 0 12px 36px rgba(0, 0, 0, 0.45);
-      position: relative;
-      overflow: hidden;
-    }
-
-    .console-panel::before {
-      content: "";
-      position: absolute;
-      top: 0; left: 0; right: 0;
-      height: 1px;
-      background: linear-gradient(90deg, transparent, rgba(0, 82, 255, 0.4), transparent);
-    }
-
-    .panel-header {
+      box-shadow: 0 10px 32px rgba(0, 0, 0, 0.45);
       display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 18px;
+      flex-direction: column;
+      gap: 16px;
     }
 
-    .panel-tag {
-      font-size: 12px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      color: var(--text-dim);
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .live-status {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 12px;
-      font-family: var(--mono);
-      font-weight: 600;
-      padding: 6px 14px;
-      border-radius: 20px;
-    }
-
-    .live-disconnected {
-      background: rgba(244, 63, 94, 0.1);
-      border: 1px solid rgba(244, 63, 94, 0.3);
-      color: var(--danger);
-    }
-
-    .live-connected {
-      background: var(--success-glow);
-      border: 1px solid rgba(16, 185, 129, 0.4);
-      color: var(--success);
-    }
-
-    .pulse-dot {
-      width: 7px;
-      height: 7px;
-      border-radius: 50%;
-      background: currentColor;
-    }
-
-    .live-connected .pulse-dot {
-      box-shadow: 0 0 10px var(--success);
-      animation: pulse 2s infinite;
-    }
-
-    @keyframes pulse {
-      0% { opacity: 1; transform: scale(1); }
-      50% { opacity: 0.4; transform: scale(0.85); }
-      100% { opacity: 1; transform: scale(1); }
-    }
-
-    /* CONNECTION SELECTOR */
-    .comm-selector {
+    /* ================= HARDWARE BRIDGE SELECTOR ================= */
+    .comm-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
       gap: 12px;
-      margin-bottom: 20px;
     }
 
     .comm-btn {
@@ -269,13 +300,13 @@
       gap: 4px;
       cursor: pointer;
       text-align: left;
-      transition: all 0.2s ease;
       font-family: var(--sans);
+      transition: all 0.2s ease;
     }
 
-    .comm-btn:hover {
+    .comm-btn:hover:not(:disabled) {
       background: var(--surface-hover);
-      border-color: #2b3954;
+      border-color: var(--border-strong);
       transform: translateY(-1px);
     }
 
@@ -289,7 +320,7 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      font-size: 14px;
+      font-size: 13px;
       font-weight: 700;
     }
 
@@ -298,87 +329,87 @@
       color: var(--text-muted);
     }
 
-    /* ACTION BAR */
-    .aux-actions {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      margin-bottom: 22px;
-      flex-wrap: wrap;
-    }
-
-    .aux-btn {
-      background: var(--surface-raised);
+    /* ================= STEPPER VISUAL EN VIVO ================= */
+    .sign-stepper {
+      display: none;
+      background: #05070a;
       border: 1px solid var(--border);
-      color: var(--text);
-      font-size: 12px;
-      font-weight: 600;
-      padding: 9px 14px;
-      border-radius: 8px;
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      transition: 0.18s ease;
-    }
-
-    .aux-btn:hover:not(:disabled) {
-      background: var(--surface-hover);
-      border-color: #3b4d70;
-    }
-
-    .aux-btn:disabled {
-      opacity: 0.35;
-      cursor: not-allowed;
-    }
-
-    /* PSBT WORKBENCH */
-    .workbench-section {
-      border-top: 1px solid var(--border);
-      padding-top: 20px;
-      display: flex;
+      border-radius: 14px;
+      padding: 16px;
       flex-direction: column;
-      gap: 14px;
+      gap: 12px;
+      animation: fadeIn 0.3s ease;
     }
 
-    .workbench-header {
+    .stepper-header {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
       display: flex;
       align-items: center;
       justify-content: space-between;
     }
 
-    .workbench-title {
-      font-size: 14px;
-      font-weight: 700;
-      color: #e2e8f0;
-      display: flex;
-      align-items: center;
-      gap: 8px;
+    .step-track {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
     }
 
-    .step-indicator {
-      background: rgba(0, 82, 255, 0.2);
-      border: 1px solid var(--blue);
-      color: #93c5fd;
+    .step-node {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      transition: all 0.2s ease;
+    }
+
+    .step-node.active {
+      border-color: var(--blue);
+      background: rgba(0, 82, 255, 0.12);
+      box-shadow: 0 0 12px var(--blue-glow);
+    }
+
+    .step-node.completed {
+      border-color: var(--success);
+      background: rgba(16, 185, 129, 0.08);
+    }
+
+    .step-number {
       font-size: 10px;
       font-weight: 800;
-      padding: 2px 8px;
-      border-radius: 6px;
       font-family: var(--mono);
+      color: var(--text-dim);
     }
 
-    .editor-wrap {
-      position: relative;
+    .step-node.active .step-number { color: var(--btc); }
+    .step-node.completed .step-number { color: var(--success); }
+
+    .step-label {
+      font-size: 11px;
+      font-weight: 700;
+      line-height: 1.3;
+      color: var(--text-muted);
     }
 
+    .step-node.active .step-label { color: var(--text); }
+    .step-node.completed .step-label { color: var(--success); }
+
+    /* ================= WORKBENCH PSBT ================= */
     .psbt-editor {
       width: 100%;
       height: 110px;
-      background: #04060a;
+      background: #05070a;
       border: 1px solid var(--border);
       border-radius: 12px;
       color: #38bdf8;
       font-family: var(--mono);
+      font-variant-numeric: tabular-nums;
       font-size: 12px;
       padding: 14px;
       resize: vertical;
@@ -388,8 +419,8 @@
 
     .psbt-editor:focus {
       outline: none;
-      border-color: var(--blue);
-      box-shadow: 0 0 0 3px var(--blue-glow);
+      border-color: var(--btc);
+      box-shadow: 0 0 0 3px var(--btc-glow);
     }
 
     .psbt-editor::placeholder {
@@ -397,19 +428,19 @@
       font-family: var(--sans);
     }
 
-    .workbench-btns {
+    .btn-row {
       display: flex;
       gap: 10px;
       flex-wrap: wrap;
     }
 
-    .btn-sign-main {
+    .btn-sign {
       flex: 1;
-      min-width: 220px;
-      background: linear-gradient(135deg, #0052ff 0%, #0036a8 100%);
+      min-width: 240px;
+      background: linear-gradient(135deg, #0052ff 0%, #003ecb 100%);
       color: #ffffff;
       border: 1px solid rgba(255, 255, 255, 0.2);
-      padding: 14px 22px;
+      padding: 13px 22px;
       border-radius: 12px;
       font-size: 14px;
       font-weight: 800;
@@ -419,48 +450,58 @@
       justify-content: center;
       gap: 10px;
       transition: all 0.2s ease;
-      box-shadow: 0 4px 20px var(--blue-glow);
+      box-shadow: 0 4px 18px var(--blue-glow);
+      font-family: var(--sans);
     }
 
-    .btn-sign-main:hover:not(:disabled) {
-      background: linear-gradient(135deg, #1a66ff 0%, #0045d8 100%);
+    .btn-sign:hover:not(:disabled) {
+      background: linear-gradient(135deg, #1a66ff 0%, #0047e6 100%);
       transform: translateY(-1px);
-      box-shadow: 0 6px 26px rgba(0, 82, 255, 0.45);
+      box-shadow: 0 6px 24px rgba(0, 82, 255, 0.45);
     }
 
-    .btn-sign-main:disabled {
+    .btn-sign:disabled {
       opacity: 0.35;
       cursor: not-allowed;
       transform: none;
       box-shadow: none;
     }
 
-    .btn-clear {
+    .aux-btn {
       background: var(--surface-raised);
       border: 1px solid var(--border);
-      color: var(--text-muted);
-      padding: 14px 18px;
-      border-radius: 12px;
-      font-size: 13px;
+      color: var(--text);
+      font-size: 12px;
       font-weight: 600;
+      padding: 10px 16px;
+      border-radius: 10px;
       cursor: pointer;
-      transition: 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-family: var(--sans);
+      transition: 0.15s ease;
     }
 
-    .btn-clear:hover {
+    .aux-btn:hover:not(:disabled) {
       background: var(--surface-hover);
-      color: #fff;
+      border-color: var(--border-strong);
     }
 
-    /* RESULT MODAL DRAWER */
-    .result-drawer {
-      background: linear-gradient(180deg, rgba(16, 185, 129, 0.08) 0%, rgba(11, 15, 25, 0.95) 100%);
-      border: 1px solid rgba(16, 185, 129, 0.35);
-      border-radius: 16px;
-      padding: 24px;
+    .aux-btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    /* ================= RECIBO RESULTADO ================= */
+    .receipt-box {
       display: none;
+      background: linear-gradient(180deg, rgba(16, 185, 129, 0.1) 0%, rgba(18, 22, 32, 0.95) 100%);
+      border: 1px solid rgba(16, 185, 129, 0.4);
+      border-radius: 16px;
+      padding: 22px;
       flex-direction: column;
-      gap: 18px;
+      gap: 16px;
       animation: fadeIn 0.3s ease;
     }
 
@@ -469,36 +510,49 @@
       to { opacity: 1; transform: translateY(0); }
     }
 
-    .result-header {
+    .receipt-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 10px;
     }
 
-    .result-badge {
+    .receipt-badge {
       display: inline-flex;
       align-items: center;
       gap: 8px;
       color: var(--success);
-      font-size: 15px;
+      font-size: 14px;
       font-weight: 800;
+    }
+
+    .efficiency-tag {
+      font-size: 11px;
+      font-family: var(--mono);
+      background: rgba(0, 82, 255, 0.15);
+      border: 1px solid rgba(0, 82, 255, 0.3);
+      color: #38bdf8;
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-weight: 700;
     }
 
     .qr-stand {
       background: #ffffff;
-      padding: 18px;
-      border-radius: 16px;
+      padding: 16px;
+      border-radius: 14px;
       width: fit-content;
       margin: 0 auto;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 10px;
+      gap: 8px;
     }
 
     .qr-stand span {
-      font-size: 11px;
+      font-size: 10px;
       font-weight: 800;
       color: #0f172a;
       letter-spacing: 0.5px;
@@ -511,22 +565,22 @@
       flex-wrap: wrap;
     }
 
-    .btn-download-tx {
+    .btn-action-primary {
       background: var(--success);
       color: #000000;
       font-weight: 800;
       border: none;
-      padding: 12px 20px;
+      padding: 11px 18px;
       border-radius: 10px;
       cursor: pointer;
       display: inline-flex;
       align-items: center;
-      gap: 8px;
-      font-size: 13px;
+      gap: 6px;
+      font-size: 12px;
       transition: 0.2s;
     }
 
-    .btn-download-tx:hover {
+    .btn-action-primary:hover {
       background: #34d399;
       transform: translateY(-1px);
     }
@@ -536,13 +590,13 @@
       color: #ffffff;
       font-weight: 800;
       border: 1px solid rgba(255, 255, 255, 0.2);
-      padding: 12px 20px;
+      padding: 11px 18px;
       border-radius: 10px;
       cursor: pointer;
       display: inline-flex;
       align-items: center;
-      gap: 8px;
-      font-size: 13px;
+      gap: 6px;
+      font-size: 12px;
       transition: all 0.2s ease;
       box-shadow: 0 4px 14px rgba(16, 185, 129, 0.3);
     }
@@ -553,317 +607,600 @@
       box-shadow: 0 6px 20px rgba(16, 185, 129, 0.45);
     }
 
-    /* EVENT CONSOLE */
+    /* ================= COLD SWAP REAL WIDGET ================= */
+    .swap-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      position: relative;
+    }
+
+    .swap-card::before {
+      content: "";
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, #0052ff, #38bdf8, transparent);
+    }
+
+    .swap-widget-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .swap-widget-head h2 {
+      font-size: 17px;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .swap-input-group {
+      background: var(--surface-raised);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      transition: border-color 0.2s;
+    }
+
+    .swap-input-group:focus-within {
+      border-color: var(--blue);
+      box-shadow: 0 0 0 2px var(--blue-glow);
+    }
+
+    .swap-input-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-muted);
+    }
+
+    .swap-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .swap-amount-input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      font-size: 26px;
+      font-weight: 800;
+      font-family: var(--mono);
+      font-variant-numeric: tabular-nums;
+      color: var(--text);
+    }
+
+    .swap-amount-input::placeholder {
+      color: var(--text-dim);
+    }
+
+    /* BOTÓN SELECTOR DE MONEDA ESTILO SIVAREXCHANGE */
+    .coin-trigger-btn {
+      background: var(--surface-elevated);
+      border: 1px solid var(--border-strong);
+      color: var(--text);
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 9px 14px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-family: var(--sans);
+      font-weight: 800;
+      font-size: 13px;
+      transition: all 0.2s ease;
+      user-select: none;
+    }
+
+    .coin-trigger-btn:hover {
+      background: var(--surface-hover);
+      border-color: var(--blue);
+    }
+
+    .coin-network-badge {
+      font-size: 10px;
+      font-weight: 700;
+      font-family: var(--mono);
+      background: rgba(255, 255, 255, 0.08);
+      padding: 2px 6px;
+      border-radius: 4px;
+      color: var(--text-muted);
+    }
+
+    .swap-divider {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: -6px 0;
+      position: relative;
+    }
+
+    .swap-direction-badge {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      background: var(--surface-elevated);
+      border: 1px solid var(--border-strong);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--btc);
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
+    }
+
+    .dest-wallet-wrap {
+      background: #05070a;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .dest-wallet-label {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-dim);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .dest-wallet-input {
+      width: 100%;
+      background: transparent;
+      border: none;
+      outline: none;
+      font-family: var(--mono);
+      font-variant-numeric: tabular-nums;
+      font-size: 13px;
+      color: #38bdf8;
+    }
+
+    .btn-create-swap {
+      background: linear-gradient(135deg, #0052ff 0%, #0037a8 100%);
+      color: #ffffff;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      padding: 16px 24px;
+      border-radius: 12px;
+      font-size: 15px;
+      font-weight: 800;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      transition: all 0.2s ease;
+      box-shadow: 0 4px 20px var(--blue-glow);
+      font-family: var(--sans);
+    }
+
+    .btn-create-swap:hover {
+      background: linear-gradient(135deg, #1a66ff 0%, #0045d8 100%);
+      transform: translateY(-1px);
+      box-shadow: 0 6px 26px rgba(0, 82, 255, 0.45);
+    }
+
+    /* ================= RECEIVE / WATCH-ONLY TAB ================= */
+    .receive-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 16px;
+    }
+
+    .receive-box {
+      background: var(--surface-raised);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 14px;
+      text-align: center;
+    }
+
+    .addr-unlinked-box {
+      background: rgba(0, 82, 255, 0.06);
+      border: 1px dashed rgba(0, 82, 255, 0.35);
+      border-radius: 14px;
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      text-align: left;
+      width: 100%;
+    }
+
+    /* ================= MODAL BUSCADOR DE MONEDAS SIVAREXCHANGE ================= */
+    .coin-modal-backdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.75);
+      backdrop-filter: blur(6px);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      animation: fadeIn 0.2s ease;
+    }
+
+    .coin-modal-panel {
+      background: var(--surface);
+      border: 1px solid var(--border-strong);
+      border-radius: 18px;
+      max-width: 440px;
+      width: 100%;
+      max-height: 80vh;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7);
+      overflow: hidden;
+    }
+
+    .coin-modal-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .coin-modal-head h3 {
+      font-size: 15px;
+      font-weight: 800;
+      color: var(--text);
+    }
+
+    .btn-close-modal {
+      background: transparent;
+      border: none;
+      color: var(--text-dim);
+      font-size: 18px;
+      cursor: pointer;
+      padding: 4px 8px;
+      border-radius: 6px;
+    }
+
+    .btn-close-modal:hover {
+      color: var(--text);
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .coin-search-wrap {
+      padding: 12px 18px;
+      border-bottom: 1px solid var(--border);
+      background: #090c12;
+    }
+
+    .coin-search-input {
+      width: 100%;
+      background: var(--surface-raised);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 14px;
+      color: var(--text);
+      font-family: var(--sans);
+      font-size: 13px;
+      outline: none;
+    }
+
+    .coin-search-input:focus {
+      border-color: var(--blue);
+      box-shadow: 0 0 0 2px var(--blue-glow);
+    }
+
+    .coin-list-container {
+      overflow-y: auto;
+      padding: 8px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      max-height: 400px;
+    }
+
+    .coin-item-btn {
+      background: transparent;
+      border: none;
+      border-radius: 10px;
+      padding: 10px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      color: var(--text);
+      cursor: pointer;
+      text-align: left;
+      font-family: var(--sans);
+      transition: background 0.15s;
+    }
+
+    .coin-item-btn:hover {
+      background: var(--surface-hover);
+    }
+
+    .coin-item-left {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .coin-item-title {
+      font-size: 13px;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .coin-item-sub {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    /* ================= TERMINAL ================= */
     .console-terminal {
       background: #030508;
-      border: 1px solid #141b2b;
+      border: 1px solid var(--border);
       border-radius: 12px;
-      padding: 14px;
+      padding: 12px 14px;
       font-family: var(--mono);
+      font-variant-numeric: tabular-nums;
       font-size: 11px;
-      color: #718096;
-      height: 95px;
+      color: var(--text-dim);
+      height: 90px;
       overflow-y: auto;
       white-space: pre-wrap;
       line-height: 1.6;
     }
 
-    /* SIVAREXCHANGE CROSS-PROMO FOOTER */
-    .ecosystem-footer {
-      background: linear-gradient(135deg, rgba(0, 82, 255, 0.1) 0%, rgba(13, 18, 31, 0.8) 100%);
-      border: 1px solid rgba(0, 82, 255, 0.25);
-      border-radius: 16px;
-      padding: 20px 24px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 20px;
-      flex-wrap: wrap;
-    }
-
-    .eco-text h3 {
-      font-size: 15px;
-      font-weight: 800;
-      color: #ffffff;
-      margin-bottom: 4px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .eco-text p {
-      font-size: 12px;
-      color: var(--text-muted);
-      line-height: 1.5;
-    }
-
-    .eco-cta-btn {
-      background: var(--blue);
-      color: #ffffff;
-      padding: 11px 20px;
-      border-radius: 10px;
-      font-size: 13px;
-      font-weight: 700;
-      text-decoration: none;
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      transition: all 0.2s ease;
-      white-space: nowrap;
-    }
-
-    .eco-cta-btn:hover {
-      background: #1a66ff;
-      box-shadow: 0 4px 16px var(--blue-glow);
-      transform: translateY(-1px);
-    }
-
-    /* SECURITY DISCLOSURE ACCORDION */
-    .sec-guide {
-      background: rgba(17, 23, 38, 0.6);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 16px 20px;
-    }
-
-    .sec-guide-title {
-      font-size: 13px;
-      font-weight: 700;
-      color: #e2e8f0;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      cursor: pointer;
-      user-select: none;
-    }
-
-    .sec-guide-content {
-      font-size: 12px;
-      color: var(--text-muted);
-      line-height: 1.6;
-      margin-top: 12px;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-
-    .sec-guide-content code {
-      font-family: var(--mono);
-      background: rgba(255, 255, 255, 0.08);
-      padding: 1px 6px;
-      border-radius: 4px;
-      color: #38bdf8;
-    }
-
-    .bad-example {
-      color: #fb7185;
-      font-family: var(--mono);
-    }
-
-    .good-example {
-      color: #34d399;
-      font-family: var(--mono);
-    }
-
+    /* ================= FOOTER ================= */
     .page-footer {
       text-align: center;
       font-size: 11px;
       color: var(--text-dim);
-      padding: 8px 0 16px;
+      line-height: 1.6;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      padding-top: 8px;
     }
   </style>
 </head>
 <body>
+
   <div class="app-shell">
 
-    <!-- TOP NAVBAR -->
-    <nav class="nav-bar">
+    <!-- HEADER INSTITUCIONAL -->
+    <header class="top-header">
       <a href="https://sivarexchange.com" target="_blank" class="brand-wrap" title="Ir a Sivar Exchange">
-        <div class="brand-shield">
-          <svg viewBox="0 0 64 64" width="24" height="24" fill="none">
+        <div class="brand-badge">
+          <svg viewBox="0 0 64 64" width="22" height="22" fill="none">
             <path d="M42 20C42 15.0294 37.9706 11 33 11H25C19.4772 11 15 15.4772 15 21C15 26.5228 19.4772 31 25 31H39C44.5228 31 49 35.4772 49 41C49 46.5228 44.5228 51 39 51H31C26.0294 51 22 46.9706 22 42" stroke="#FFFFFF" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
             <circle cx="32" cy="31" r="3.8" fill="#0052FF" stroke="#FFFFFF" stroke-width="1.2"/>
           </svg>
         </div>
-        <div class="brand-text">
-          <h2>Sivar <span>Exchange</span></h2>
-          <p>🇸🇻 El Exchange de El Salvador</p>
+        <div class="brand-meta">
+          <h1>SIVAR <span class="accent">COLD WALLET</span> • SUITE</h1>
+          <p>
+            <span>Firmador PSBT + Cold Swap No Custodial</span>
+          </p>
         </div>
       </a>
-      <a href="https://sivarexchange.com" target="_blank" class="exchange-cta">
-        <span>sivarexchange.com</span>
-        <span>↗</span>
-      </a>
-    </nav>
 
-    <!-- HERO META -->
-    <header class="hero-meta">
-      <div class="hero-title-row">
-        <h1>Sivar Cold Wallet <span class="badge-protocol">BIP-174 PSBT</span></h1>
-      </div>
-      <p>Consola de firma segura de retiros Bitcoin vía Bluetooth Low Energy (BLE) y USB Serial. Entorno 100% no custodial.</p>
-    </header>
-
-    <!-- CONSOLE PANEL -->
-    <main class="console-panel">
-      <div class="panel-header">
-        <div class="panel-tag">
-          <span style="color: var(--blue);">●</span>
-          <span>Hardware Bridge</span>
-        </div>
-        <div id="connBadge" class="live-status live-disconnected">
+      <div class="header-actions">
+        <div id="connBadge" class="hw-status-pill">
           <span class="pulse-dot"></span>
           <span id="connText">DESCONECTADO</span>
         </div>
+        <a href="https://sivarexchange.com" target="_blank" class="exchange-cta">
+          <span>SivarExchange.com</span>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M7 17L17 7M17 7H7M17 7V17"/></svg>
+        </a>
       </div>
+    </header>
 
-      <!-- CONNECTION MODE SELECTOR -->
-      <div class="comm-selector">
-        <button id="btnBle" class="comm-btn" onclick="toggleBle()">
-          <div class="comm-btn-head">
-            <span>🔵 Bluetooth Low Energy</span>
-            <span style="font-size: 11px; opacity: 0.7;">Inalámbrico</span>
-          </div>
-          <div class="comm-btn-desc">Para teléfonos Android (Chrome) y iPhone (Bluefy)</div>
-        </button>
+    <!-- NAVEGACIÓN INSTITUCIONAL POR PESTAÑAS (TIPO TREZOR SUITE) -->
+    <nav class="suite-nav">
+      <button class="nav-tab active accent-btc" onclick="switchSuiteTab('sign')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+        <span>Firmar Retiro (PSBT)</span>
+      </button>
 
-        <button id="btnUsb" class="comm-btn" onclick="toggleUsb()">
-          <div class="comm-btn-head">
-            <span>🔌 Cable USB Serial</span>
-            <span style="font-size: 11px; opacity: 0.7;">115200 Baud</span>
-          </div>
-          <div class="comm-btn-desc">Para computadoras PC, Mac y Linux (Chrome/Edge)</div>
-        </button>
-      </div>
+      <button class="nav-tab accent-swap" onclick="switchSuiteTab('swap')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>
+        <span>Cold Swap (Cripto ⇄ BTC)</span>
+        <span class="badge-tab-tag">Sin KYC</span>
+      </button>
+    </nav>
 
-      <!-- AUXILIARY ACTIONS -->
-      <div class="aux-actions">
-        <button id="btnZpub" class="aux-btn" onclick="fetchZpub()" disabled>
-          <span>🔑</span>
-          <span>Exportar ZPUB (Watch-Only)</span>
-        </button>
-        <span style="font-size: 11px; color: var(--text-dim); margin-left: auto;">
-          💡 En móvil usa <b>Google Chrome</b> (Android) o <b>Bluefy</b> (iOS).
-        </span>
-      </div>
-
-      <!-- PSBT WORKBENCH -->
-      <section class="workbench-section">
-        <div class="workbench-header">
-          <div class="workbench-title">
-            <span class="step-indicator">PASO 2</span>
-            <span>Firmar Paquete de Retiro PSBT</span>
-          </div>
-        </div>
-
-        <div class="editor-wrap">
-          <textarea id="psbtInput" class="psbt-editor" placeholder="Pega aquí el código PSBT generado por BlueWallet o Sparrow (inicia con cHNidP8...)"></textarea>
-        </div>
-
-        <div class="workbench-btns">
-          <button id="btnSign" class="btn-sign-main" onclick="sendPSBT()" disabled>
-            <span>⚡ Enviar a ESP32 y Autorizar con PIN</span>
+    <!-- ================= PESTAÑA 1: FIRMAR PSBT ================= -->
+    <section id="panelSign" class="tab-panel active">
+      <div class="card">
+        <!-- HARDWARE BRIDGE -->
+        <div class="comm-grid">
+          <button id="btnBle" class="comm-btn" onclick="toggleBle()">
+            <div class="comm-btn-head">
+              <span>🔵 Bluetooth Low Energy (BLE)</span>
+              <span style="font-size: 11px; opacity: 0.7;">Inalámbrico</span>
+            </div>
+            <div class="comm-btn-desc">Para Android (Chrome) e iPhone / iPad (App Bluefy)</div>
           </button>
-          <button class="btn-clear" onclick="clearFields()">Limpiar</button>
+
+          <button id="btnUsb" class="comm-btn" onclick="toggleUsb()">
+            <div class="comm-btn-head">
+              <span>🔌 Cable USB Serial</span>
+              <span style="font-size: 11px; opacity: 0.7;">115200 Baud</span>
+            </div>
+            <div class="comm-btn-desc">Para PC, Mac y Linux (Google Chrome / Brave / Edge)</div>
+          </button>
         </div>
 
-        <!-- RESULT DRAWER -->
-        <div id="resultBox" class="result-drawer">
-          <div class="result-header">
-            <div class="result-badge">
-              <span>✓</span>
-              <span>Transacción Firmada Exitosamente</span>
+        <!-- PSBT WORKBENCH -->
+        <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 6px;">
+          <div style="display: flex; align-items: center; justify-content: space-between;">
+            <div style="font-size: 14px; font-weight: 700; display: flex; align-items: center; gap: 8px;">
+              <span style="background: rgba(0, 82, 255, 0.15); border: 1px solid rgba(0, 82, 255, 0.4); color: #38bdf8; font-size: 10px; font-weight: 800; padding: 2px 7px; border-radius: 6px; font-family: var(--mono);">BIP-174</span>
+              <span>Pegar Paquete PSBT sin firmar</span>
             </div>
-            <span style="font-size: 11px; color: var(--text-muted);">Lista para emitir a la mempool</span>
           </div>
 
-          <div class="qr-stand">
-            <div id="qrcodeSigned"></div>
-            <span>Escanear con BlueWallet / Sparrow</span>
+          <textarea id="psbtInput" class="psbt-editor" placeholder="Pega aquí el paquete PSBT Base64 generado por BlueWallet, Sparrow o Electrum (inicia con cHNidP8...)"></textarea>
+
+          <div class="btn-row">
+            <button id="btnSign" class="btn-sign" onclick="sendPSBT()" disabled>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+              <span id="btnSignText">Enviar a ESP32 y Autorizar con PIN</span>
+            </button>
+            <button class="aux-btn" onclick="clearFields()">Limpiar</button>
           </div>
 
-          <textarea id="psbtOutput" readonly style="height: 60px; font-size: 11px; margin: 0;" class="psbt-editor"></textarea>
+          <!-- STEPPER VISUAL EN VIVO -->
+          <div id="signStepper" class="sign-stepper">
+            <div class="stepper-header">
+              <span>Progreso de Autorización en Hardware</span>
+              <span id="stepperStatusText" style="color: #38bdf8;">Transmitiendo datos...</span>
+            </div>
+            <div class="step-track">
+              <div id="step1Node" class="step-node active">
+                <span class="step-number">01 / PSBT</span>
+                <span class="step-label">Cargado en ESP32</span>
+              </div>
+              <div id="step2Node" class="step-node">
+                <span class="step-number">02 / OLED</span>
+                <span class="step-label">PIN y Confirmación</span>
+              </div>
+              <div id="step3Node" class="step-node">
+                <span class="step-number">03 / RED</span>
+                <span class="step-label">Firma Generada</span>
+              </div>
+            </div>
+          </div>
 
-          <div class="signed-actions">
-            <button class="btn-download-tx" onclick="downloadSignedFile()">
-              <span>💾 Descargar Archivo (.psbt)</span>
-            </button>
-            <button class="aux-btn" onclick="copySigned()">
-              <span>📋 Copiar Texto Base64</span>
-            </button>
-            <button class="btn-broadcast-tx" onclick="confirmBroadcast()">
-              <span>🚀 Transmitida con Éxito (Limpiar Formulario)</span>
-            </button>
+          <!-- RESULT DRAWER -->
+          <div id="resultBox" class="receipt-box">
+            <div class="receipt-header">
+              <div class="receipt-badge">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>
+                <span>Transacción Firmada Exitosamente</span>
+              </div>
+              <span class="efficiency-tag">BIP-84 Native SegWit OK</span>
+            </div>
+
+            <div class="qr-stand">
+              <div id="qrcodeSigned"></div>
+              <span>Escanear con BlueWallet / Sparrow</span>
+            </div>
+
+            <textarea id="psbtOutput" readonly style="height: 60px; font-size: 11px; margin: 0;" class="psbt-editor"></textarea>
+
+            <div class="signed-actions">
+              <button class="btn-action-primary" onclick="downloadSignedFile()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4m4-5l5 5 5-5m-5 5V3"/></svg>
+                <span>Descargar .psbt</span>
+              </button>
+              <button class="aux-btn" onclick="copySigned()">
+                <span>Copiar Base64</span>
+              </button>
+              <button class="btn-broadcast-tx" onclick="confirmBroadcast()">
+                <span>🚀 Transmitida con Éxito (Limpiar Formulario)</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- BROADCAST CONFIRMATION -->
+          <div id="broadcastSuccessBox" class="receipt-box" style="border-color: rgba(16, 185, 129, 0.45); background: linear-gradient(180deg, rgba(16, 185, 129, 0.12) 0%, rgba(18, 22, 32, 0.95) 100%);">
+            <div class="receipt-header">
+              <div class="receipt-badge">
+                <span>🎉</span>
+                <span>¡Transacción Transmitida a la Mempool!</span>
+              </div>
+              <span style="font-size: 11px; color: var(--success); font-weight: 700;">En espera de confirmación minera</span>
+            </div>
+            <p style="font-size: 13px; color: var(--text-muted); line-height: 1.5;">
+              Tu transacción ha sido emitida a la red de mineros. El formulario ha sido limpiado para proteger tus UTXOs gastados contra dobles gastos accidentales.
+            </p>
+            <div id="txidLinkContainer" style="display: none; padding: 10px 14px; background: rgba(0, 0, 0, 0.4); border-radius: 8px; border: 1px solid var(--border); font-size: 12px; font-family: var(--mono); word-break: break-all;">
+              <span style="color: var(--text-dim);">TXID: </span><a id="txidLink" href="#" target="_blank" style="color: #60a5fa; text-decoration: underline;"></a>
+            </div>
+            <div style="display: flex; gap: 10px; margin-top: 6px;">
+              <button class="aux-btn" onclick="closeBroadcastSuccess()">
+                <span>+ Preparar Nuevo Retiro</span>
+              </button>
+            </div>
           </div>
         </div>
+      </div>
+    </section>
 
-        <!-- BROADCAST CONFIRMATION DRAWER -->
-        <div id="broadcastSuccessBox" class="result-drawer" style="border-color: rgba(16, 185, 129, 0.45); background: linear-gradient(180deg, rgba(16, 185, 129, 0.12) 0%, rgba(11, 15, 25, 0.95) 100%); display: none;">
-          <div class="result-header">
-            <div class="result-badge">
-              <span>🎉</span>
-              <span>¡Transacción Transmitida a la Red Bitcoin!</span>
-            </div>
-            <span style="font-size: 11px; color: var(--success);">En espera de confirmación minera</span>
+    <!-- ================= PESTAÑA 2: COLD SWAP IN-APP (WIDGET SIVAREXCHANGE) ================= -->
+    <section id="panelSwap" class="tab-panel">
+      <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%;">
+        <div style="text-align: center; margin-bottom: 16px;">
+          <div style="display: inline-flex; align-items: center; gap: 8px; font-size: 16px; font-weight: 800; color: #fff;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="color: #38bdf8;"><path d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>
+            <span>Cold Swap In-App · SivarExchange</span>
+            <span style="font-size: 10px; background: rgba(0, 82, 255, 0.15); color: var(--blue); border: 1px solid rgba(0, 82, 255, 0.3); padding: 2px 8px; border-radius: 999px; font-weight: 700;">Sin KYC</span>
           </div>
-          <p style="font-size: 13px; color: var(--text-muted); line-height: 1.5;">
-            Tu transacción ha sido emitida a los mineros. El formulario ha sido limpiado automáticamente para proteger tus UTXOs gastados contra intentos accidentales de doble gasto.
+          <p style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">
+            Recarga tu almacenamiento en frío directamente desde más de 80 criptomonedas sin salir de la suite.
           </p>
-          <div id="txidLinkContainer" style="display: none; padding: 10px 14px; background: rgba(0, 0, 0, 0.4); border-radius: 8px; border: 1px solid var(--border); font-size: 12px; font-family: var(--mono); word-break: break-all;">
-            <span style="color: var(--text-dim);">TXID: </span><a id="txidLink" href="#" target="_blank" style="color: #60a5fa; text-decoration: underline;"></a>
-          </div>
-          <div style="display: flex; gap: 10px; margin-top: 6px;">
-            <button class="aux-btn" onclick="closeBroadcastSuccess()">
-              <span>+ Preparar Nuevo Retiro</span>
-            </button>
-          </div>
         </div>
-      </section>
 
-      <!-- TERMINAL -->
-      <div style="margin-top: 20px;">
-        <div style="font-size: 11px; font-weight: 700; color: var(--text-dim); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px;">Log de Comunicación Serial/BLE:</div>
-        <div id="logBox" class="console-terminal">Iniciando consola... Selecciona Bluetooth o USB para conectar.</div>
-      </div>
-    </main>
-
-    <!-- SECURITY DISCLOSURE & PASSPHRASE GUIDE -->
-    <aside class="sec-guide">
-      <div class="sec-guide-title" onclick="toggleSecGuide()">
-        <span>🛡️ ¿Por qué tu Palabra 25 (Passphrase) debe ser robusta?</span>
-        <span id="secArrow">▼</span>
-      </div>
-      <div id="secContent" class="sec-guide-content">
-        <p>Si pierdes físicamente tu ESP32, un atacante con conocimientos avanzados puede descargar la memoria flash en su computadora y romper un PIN de 6 dígitos con fuerza bruta mediante tarjetas gráficas (GPU) en minutos.</p>
-        <p><b>Tu verdadera muralla criptográfica es la Palabra 25:</b> nunca se almacena en el chip. Por eso es vital evitar contraseñas predecibles:</p>
-        <div style="padding-left: 8px;">
-          <div>❌ <span class="bad-example">Evita palabras obvias:</span> <code>bitcoin</code>, <code>elsalvador</code>, <code>admin123</code> o nombres propios.</div>
-          <div style="margin-top: 4px;">✅ <span class="good-example">Usa frases largas (12 a 16+ caracteres):</span> <code>Cafe.Volcan!2026#Sivar</code> o combinaciones de varias palabras sin sentido común.</div>
+        <div style="width: 100%; max-width: 480px; background: #0c0f17; border: 1px solid var(--border-strong); border-radius: 24px; box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6); overflow: hidden; position: relative;">
+          <iframe
+            id="sivarSwapIframe"
+            src="widget.html?theme=dark&lang=es&tab=swap&from=usdt&fromNet=trx&to=btc&toNet=btc"
+            width="100%"
+            height="760"
+            style="border: none; width: 100%; min-height: 760px; display: block; background: #0c0f17;"
+            allow="clipboard-read; clipboard-write; ethereum">
+          </iframe>
         </div>
-      </div>
-    </aside>
 
-    <!-- SIVAREXCHANGE CROSS-PROMO FOOTER -->
-    <div class="ecosystem-footer">
-      <div class="eco-text">
-        <h3>
-          <span>🇸🇻 Sivar Exchange</span>
-        </h3>
-        <p>Intercambios directos entre redes · De wallet a wallet · Sin custodia · Lightning, On-Chain y Stablecoins.</p>
+        <p style="font-size: 11px; color: var(--text-dim); text-align: center; line-height: 1.5; margin-top: 14px; max-width: 480px;">
+          🔒 Intercambio no custodial provisto por <b>SivarExchange.com</b>. Los fondos se liquidan on-chain directamente hacia la dirección que ingreses en el pedido.
+        </p>
       </div>
-      <a href="https://sivarexchange.com" target="_blank" class="eco-cta-btn">
-        <span>Intercambiar en SivarExchange</span>
-        <span>↗</span>
-      </a>
+    </section>
+
+
+
+    <!-- TERMINAL DE AUDITORÍA -->
+    <div>
+      <div style="font-size: 11px; font-weight: 700; color: var(--text-dim); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px;">Log de Auditoría Hardware / Criptografía:</div>
+      <div id="logBox" class="console-terminal">Iniciando suite de hardware... Selecciona Bluetooth o USB para conectar.</div>
     </div>
 
+    <!-- FOOTER INSTITUCIONAL -->
     <footer class="page-footer">
-      Sivar Cold Wallet &middot; Diseñado para la soberanía financiera en El Salvador. Tus claves privadas nunca salen del silicio del ESP32.
+      <div>Sivar Cold Wallet Suite · Desarrollado para la soberanía financiera en El Salvador.</div>
+      <div>Tus llaves privadas nunca salen del silicio del ESP32 · Sin custodios ni intermediarios.</div>
     </footer>
 
   </div>
 
   <script>
+    let savedColdAddress = localStorage.getItem('sivar_cold_wallet_address') || "";
+
+    // ================= PARÁMETROS HARDWARE =================
     const BLE_SERVICE_UUID = "6e400001-b5a3-f393-e0a9-e50e24dcca9e";
     const BLE_RX_UUID = "6e400002-b5a3-f393-e0a9-e50e24dcca9e";
     const BLE_TX_UUID = "6e400003-b5a3-f393-e0a9-e50e24dcca9e";
@@ -882,21 +1219,52 @@
       el.scrollTop = el.scrollHeight;
     }
 
+    // ================= TABS SWITCHER =================
+    function switchSuiteTab(tab) {
+      document.querySelectorAll('.nav-tab').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+
+      if (tab === 'sign') {
+        document.querySelectorAll('.nav-tab')[0].classList.add('active');
+        document.getElementById('panelSign').classList.add('active');
+      } else if (tab === 'swap') {
+        document.querySelectorAll('.nav-tab')[1].classList.add('active');
+        document.getElementById('panelSwap').classList.add('active');
+        initSwapWidget();
+      }
+    }
+
+    function initSwapWidget() {
+      const iframe = document.getElementById('sivarSwapIframe');
+      if (!iframe) return;
+      if (!iframe.src || iframe.src === 'about:blank' || iframe.src.endsWith('widget.html')) {
+        const isLocal = window.location.protocol === 'file:' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+        const base = isLocal ? 'widget.html' : 'https://sivarexchange.com/widget';
+        iframe.src = `${base}?theme=dark&lang=es&tab=swap&from=usdt&fromNet=trx&to=btc&toNet=btc`;
+      }
+    }
+
+    function sendToSwapTab() {
+      switchSuiteTab('swap');
+    }
+
+    // ================= ESTADOS DE HARDWARE =================
     function setConnectedUI(mode) {
       connMode = mode;
       const badge = document.getElementById("connBadge");
-      badge.className = "live-status live-connected";
+      badge.className = "hw-status-pill connected";
       document.getElementById("connText").textContent = `CONECTADO (${mode.toUpperCase()})`;
-      document.getElementById("btnZpub").disabled = false;
       document.getElementById("btnSign").disabled = false;
+      const btnTab = document.getElementById("btnZpubTab");
+      if (btnTab) btnTab.disabled = false;
 
       if (mode === 'ble') {
         document.getElementById("btnBle").classList.add("active");
-        document.getElementById("btnBle").querySelector(".comm-btn-head span").textContent = "🔵 BLE Conectado";
+        document.getElementById("btnBle").querySelector(".comm-btn-head span").textContent = "🔵 BLE Conectado: SIVAR-COLD-WALLET";
         document.getElementById("btnUsb").disabled = true;
       } else {
         document.getElementById("btnUsb").classList.add("active");
-        document.getElementById("btnUsb").querySelector(".comm-btn-head span").textContent = "🔌 USB Conectado";
+        document.getElementById("btnUsb").querySelector(".comm-btn-head span").textContent = "🔌 USB Conectado: SIVAR-COLD-WALLET";
         document.getElementById("btnBle").disabled = true;
       }
     }
@@ -904,28 +1272,66 @@
     function setDisconnectedUI() {
       connMode = null;
       const badge = document.getElementById("connBadge");
-      badge.className = "live-status live-disconnected";
+      badge.className = "hw-status-pill";
       document.getElementById("connText").textContent = "DESCONECTADO";
-      document.getElementById("btnZpub").disabled = true;
 
       const btnSign = document.getElementById("btnSign");
       btnSign.disabled = true;
-      if (btnSign.innerHTML.includes("Esperando")) {
-        btnSign.innerHTML = '<span>⚡ Reintentar Firma en ESP32</span>';
-        btnSign.style.opacity = '1';
-      }
+      const span = document.getElementById("btnSignText");
+      if (span) span.textContent = "Enviar a ESP32 y Autorizar con PIN";
+      btnSign.style.opacity = '1';
+
+      const btnTab = document.getElementById("btnZpubTab");
+      if (btnTab) btnTab.disabled = true;
 
       const bBle = document.getElementById("btnBle");
       bBle.classList.remove("active");
       bBle.disabled = false;
-      bBle.querySelector(".comm-btn-head span").textContent = "🔵 Bluetooth Low Energy";
+      bBle.querySelector(".comm-btn-head span").textContent = "🔵 Bluetooth Low Energy (BLE)";
 
       const bUsb = document.getElementById("btnUsb");
       bUsb.classList.remove("active");
       bUsb.disabled = false;
       bUsb.querySelector(".comm-btn-head span").textContent = "🔌 Cable USB Serial";
 
-      log("Enlace desconectado.");
+      hideStepper();
+      log("Enlace de hardware desconectado.");
+    }
+
+    // ================= STEPPER =================
+    function showStepper(step) {
+      document.getElementById("signStepper").style.display = "flex";
+      updateStepper(step);
+    }
+
+    function hideStepper() {
+      const s = document.getElementById("signStepper");
+      if (s) s.style.display = "none";
+    }
+
+    function updateStepper(step) {
+      const n1 = document.getElementById("step1Node");
+      const n2 = document.getElementById("step2Node");
+      const n3 = document.getElementById("step3Node");
+      const txt = document.getElementById("stepperStatusText");
+
+      n1.className = "step-node";
+      n2.className = "step-node";
+      n3.className = "step-node";
+
+      if (step === 1) {
+        n1.className = "step-node active";
+        txt.textContent = "Transmitiendo PSBT al microcontrolador...";
+      } else if (step === 2) {
+        n1.className = "step-node completed";
+        n2.className = "step-node active";
+        txt.textContent = "Revisa pantalla OLED: Ingresa PIN y confirma";
+      } else if (step === 3) {
+        n1.className = "step-node completed";
+        n2.className = "step-node completed";
+        n3.className = "step-node completed";
+        txt.textContent = "¡Firmas válidas generadas con éxito!";
+      }
     }
 
     // ================= BLUETOOTH BLE =================
@@ -935,18 +1341,15 @@
         return;
       }
       if (!navigator.bluetooth) {
-        alert("Tu navegador no soporta Web Bluetooth.\n\n• En Android: Abre en Google Chrome o Brave.\n• En iPhone/iPad: Abre en la app Bluefy (App Store).\n\n(Nota: Los navegadores integrados como Samsung Internet o WebViews a veces bloquean Bluetooth).");
+        alert("Tu navegador no soporta Web Bluetooth.\n\n• En Android: Abre en Google Chrome o Brave.\n• En iPhone/iPad: Abre en la app Bluefy (App Store).");
         return;
       }
       try {
         log("Buscando 'SIVAR-COLD-WALLET' por Bluetooth...");
-
         let device = null;
         try {
           device = await navigator.bluetooth.requestDevice({
-            filters: [
-              { namePrefix: 'SIVAR' }
-            ],
+            filters: [{ namePrefix: 'SIVAR' }],
             optionalServices: [BLE_SERVICE_UUID]
           });
         } catch (filterErr) {
@@ -954,7 +1357,6 @@
             log("Búsqueda cancelada por el usuario.");
             return;
           }
-          log("Intentando escaneo sin filtro de nombre...");
           device = await navigator.bluetooth.requestDevice({
             acceptAllDevices: true,
             optionalServices: [BLE_SERVICE_UUID]
@@ -963,7 +1365,7 @@
 
         bleDevice = device;
         bleDevice.addEventListener('gattserverdisconnected', () => {
-          log("ESP32 desconectó el enlace Bluetooth.");
+          log("El ESP32 desconectó el enlace Bluetooth.");
           setDisconnectedUI();
         });
 
@@ -1007,7 +1409,7 @@
         return;
       }
       if (!navigator.serial) {
-        alert("WebSerial solo está disponible en computadoras (PC, Mac, Linux o Chromebook) con Chrome o Edge.\n\nEn teléfonos móviles (Android o iOS), la conexión debe hacerse mediante Bluetooth.");
+        alert("WebSerial solo está disponible en computadoras con Google Chrome, Brave o Edge.");
         return;
       }
       try {
@@ -1078,14 +1480,20 @@
       if (!line) return;
       log("ESP32 >> " + line);
 
-      if (line.startsWith("SIGNED_PSBT:")) {
+      if (line.includes("PSBT_LOADED")) {
+        updateStepper(2);
+        log("Transacción cargada en el ESP32. Revisa pantalla e ingresa tu PIN.");
+      } else if (line.startsWith("SIGNED_PSBT:")) {
         const signed = line.substring(12).trim();
         signedPsbt = signed;
         unsignedPsbt = null;
 
+        updateStepper(3);
+
         const btnSign = document.getElementById("btnSign");
         btnSign.disabled = (connMode === null);
-        btnSign.innerHTML = '<span>⚡ Enviar a ESP32 y Autorizar con PIN</span>';
+        const span = document.getElementById("btnSignText");
+        if (span) span.textContent = "Enviar a ESP32 y Autorizar con PIN";
         btnSign.style.opacity = '1';
 
         const drawer = document.getElementById("resultBox");
@@ -1105,45 +1513,38 @@
               correctLevel: QRCode.CorrectLevel.L
             });
           }
-        } catch (err) {
-          console.warn("Fallo QR:", err);
-        }
+        } catch (err) {}
 
         log("✅ Transacción firmada recibida correctamente.");
       } else if (line.startsWith("ZPUB:")) {
         const zpub = line.substring(5).trim();
         navigator.clipboard.writeText(zpub);
-        alert("ZPUB copiado al portapapeles:\n\n" + zpub + "\n\nImpórtalo en BlueWallet como billetera de Solo Lectura (Watch-Only).");
+        alert("ZPUB copiado al portapapeles:\n\n" + zpub + "\n\nImpórtalo en BlueWallet o Sparrow como billetera de Solo Lectura (Watch-Only).");
       } else if (line === "ERROR:NO_AUTH") {
-        alert("🔒 EXPORTACIÓN DE ZPUB BLOQUEADA POR SEGURIDAD\n\nEl ESP32 protege tu privacidad evitando la lectura remota del ZPUB.\n\nPara autorizar la exportación:\n1. En la pantalla del ESP32, navega hasta el código QR de ZPUB.\n2. Mantén presionado el botón físico hasta ver 'AUTORIZADO (30s)'.\n3. Vuelve a presionar 'Obtener ZPUB' aquí en la web.");
+        alert("🔒 EXPORTACIÓN DE ZPUB BLOQUEADA POR SEGURIDAD\n\nEl ESP32 protege tu privacidad evitando la lectura remota del ZPUB.\n\nPara autorizar la exportación:\n1. En la pantalla del ESP32, navega hasta el código QR de ZPUB.\n2. Mantén presionado el botón físico hasta ver 'AUTORIZADO (30s)'.\n3. Vuelve a presionar 'Exportar ZPUB' aquí en la web.");
         log("⚠️ Exportación ZPUB bloqueada: Requiere autorización física en el botón del ESP32.");
       } else if (line === "ERROR:CANCELLED_BY_USER") {
-        handleSigningError("ERROR:CANCELLED_BY_USER", "⚠️ Firma cancelada en el botón físico del ESP32.\n\nLos datos del retiro se mantienen intactos si deseas reintentar.");
+        handleSigningError("ERROR:CANCELLED_BY_USER", "⚠️ Firma cancelada en el botón físico del ESP32.\n\nLos datos se mantienen intactos si deseas reintentar.");
       } else if (line === "ERROR:WRONG_PIN") {
-        handleSigningError("ERROR:WRONG_PIN", "❌ Firma fallida: PIN incorrecto introducido en el ESP32.\n\nLos datos del retiro se mantienen intactos. Vuelve a activar el Bluetooth en la placa y pulsa 'Reintentar'.");
+        handleSigningError("ERROR:WRONG_PIN", "❌ Firma fallida: PIN incorrecto introducido en el ESP32.\n\nLos datos se mantienen intactos. Vuelve a activar el Bluetooth en la placa y pulsa 'Reintentar'.");
       } else if (line === "ERROR:ZERO_INPUTS_SIGNED") {
-        handleSigningError("ERROR:ZERO_INPUTS_SIGNED", "❌ Firma fallida: La billetera no firmó ningún input.\n\nVerifica si la Passphrase (palabra 25) o la semilla en el ESP32 coinciden con la billetera emisora. Los datos se mantienen intactos para reintentar.");
+        handleSigningError("ERROR:ZERO_INPUTS_SIGNED", "❌ Firma fallida: La billetera no firmó ningún input.\n\nVerifica si la Passphrase (palabra 25) o la semilla en el ESP32 coinciden con la billetera emisora. Los datos se mantienen intactos.");
       } else if (line === "ERROR:INVALID_PSBT") {
         handleSigningError("ERROR:INVALID_PSBT", "❌ El ESP32 rechazó el PSBT por ser inválido o corrupto.\n\nLos datos se mantienen intactos.");
-      } else if (line.includes("PSBT_LOADED")) {
-        log("Transacción cargada en el ESP32. Revisa pantalla y pon tu PIN.");
       }
     }
 
     function handleSigningError(errCode, msg) {
-      // 1. Limpiar únicamente el buffer temporal del PSBT no firmado
       unsignedPsbt = null;
+      hideStepper();
 
-      // 2. Restaurar botón principal de firma/envío quitando bloqueo / spinner
       const btnSign = document.getElementById("btnSign");
       btnSign.disabled = (connMode === null);
-      btnSign.innerHTML = '<span>⚡ Reintentar Firma en ESP32</span>';
+      const span = document.getElementById("btnSignText");
+      if (span) span.textContent = "⚡ Reintentar Firma en ESP32";
       btnSign.style.opacity = '1';
 
-      // 3. Ocultar resultado previo si lo hubiera
       document.getElementById("resultBox").style.display = "none";
-
-      // 4. Mostrar log y alerta clara sin tocar los inputs del formulario
       log(`${errCode}: Inputs del formulario preservados para reintento.`);
       alert(msg);
     }
@@ -1170,9 +1571,12 @@
         document.getElementById("broadcastSuccessBox").style.display = "none";
       }
 
+      showStepper(1);
+
       const btnSign = document.getElementById("btnSign");
       btnSign.disabled = true;
-      btnSign.innerHTML = '<span>⏳ Esperando confirmación y PIN en ESP32...</span>';
+      const span = document.getElementById("btnSignText");
+      if (span) span.textContent = "⏳ Esperando confirmación y PIN en ESP32...";
       btnSign.style.opacity = '0.75';
 
       log(`Transmitiendo PSBT (${b64.length} bytes) al ESP32...`);
@@ -1180,7 +1584,7 @@
         await sendData("PSBT:" + b64 + "\n");
       } catch (err) {
         log("Error al transmitir PSBT: " + err.message);
-        handleSigningError("ERROR:COMM_FAIL", "Fallo al enviar los datos al ESP32: " + err.message + "\n\nLos datos se conservan. Reconecta y reintenta.");
+        handleSigningError("ERROR:COMM_FAIL", "Fallo al enviar los datos al ESP32: " + err.message);
       }
     }
 
@@ -1216,24 +1620,19 @@
     }
 
     function handleBroadcastSuccess(txid) {
-      // 1. Limpiar por completo los inputs del formulario
       document.getElementById("psbtInput").value = "";
       document.getElementById("psbtOutput").value = "";
-      if (document.getElementById("destAddress")) document.getElementById("destAddress").value = "";
-      if (document.getElementById("amountInput")) document.getElementById("amountInput").value = "";
-      if (document.getElementById("feeInput")) document.getElementById("feeInput").value = "";
-
-      // 2. Limpiar variables en memoria
       unsignedPsbt = null;
       signedPsbt = null;
 
-      // 3. Resetear botón principal
+      hideStepper();
+
       const btnSign = document.getElementById("btnSign");
       btnSign.disabled = (connMode === null);
-      btnSign.innerHTML = '<span>⚡ Enviar a ESP32 y Autorizar con PIN</span>';
+      const span = document.getElementById("btnSignText");
+      if (span) span.textContent = "Enviar a ESP32 y Autorizar con PIN";
       btnSign.style.opacity = '1';
 
-      // 4. Ocultar resultBox y mostrar notificación de éxito con enlace explorer
       document.getElementById("resultBox").style.display = "none";
       const box = document.getElementById("broadcastSuccessBox");
       if (box) {
@@ -1248,11 +1647,6 @@
         }
       }
 
-      // 5. Refrescar saldo y UTXOs si existen funciones del entorno
-      if (typeof refreshWalletBalance === 'function') try { refreshWalletBalance(); } catch(e){}
-      if (typeof refreshUtxos === 'function') try { refreshUtxos(); } catch(e){}
-      if (typeof updateWalletState === 'function') try { updateWalletState(); } catch(e){}
-
       log("🎉 Transacción transmitida a la red con éxito. Formulario limpiado para el próximo retiro.");
     }
 
@@ -1264,32 +1658,22 @@
     function clearFields() {
       document.getElementById("psbtInput").value = "";
       document.getElementById("psbtOutput").value = "";
-      if (document.getElementById("destAddress")) document.getElementById("destAddress").value = "";
-      if (document.getElementById("amountInput")) document.getElementById("amountInput").value = "";
-      if (document.getElementById("feeInput")) document.getElementById("feeInput").value = "";
       unsignedPsbt = null;
       signedPsbt = null;
+      hideStepper();
       document.getElementById("resultBox").style.display = "none";
       const box = document.getElementById("broadcastSuccessBox");
       if (box) box.style.display = "none";
 
       const btnSign = document.getElementById("btnSign");
       btnSign.disabled = (connMode === null);
-      btnSign.innerHTML = '<span>⚡ Enviar a ESP32 y Autorizar con PIN</span>';
+      const span = document.getElementById("btnSignText");
+      if (span) span.textContent = "Enviar a ESP32 y Autorizar con PIN";
       btnSign.style.opacity = '1';
     }
 
-    function toggleSecGuide() {
-      const content = document.getElementById("secContent");
-      const arrow = document.getElementById("secArrow");
-      if (content.style.display === "none") {
-        content.style.display = "flex";
-        arrow.textContent = "▲";
-      } else {
-        content.style.display = "none";
-        arrow.textContent = "▼";
-      }
-    }
+    // Inicializar widget
+    initSwapWidget();
   </script>
 </body>
 </html>
