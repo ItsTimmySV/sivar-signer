@@ -1053,6 +1053,30 @@
           </button>
         </div>
 
+        <!-- TOOLBAR: VERIFICAR / AUDITAR DIRECCIÓN EN PANTALLA OLED (SHOW ON DEVICE) -->
+        <div class="verify-addr-card" style="background: rgba(0, 82, 255, 0.05); border: 1px solid rgba(0, 82, 255, 0.2); border-radius: 12px; padding: 12px 16px; display: flex; flex-direction: column; gap: 8px;">
+          <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/><path d="M11 8v6M8 11h6"/></svg>
+              <span style="font-size: 13px; font-weight: 800; color: #fff;">Auditar Dirección en Pantalla OLED</span>
+              <span style="font-size: 10px; background: rgba(56, 189, 248, 0.15); color: #38bdf8; padding: 2px 7px; border-radius: 5px; font-weight: 700;">Anti-Malware</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <label for="verifyIndexInput" style="font-size: 11px; font-family: var(--mono); color: var(--text-dim);">Índice #</label>
+              <input id="verifyIndexInput" type="number" min="0" max="99" value="0" style="width: 58px; background: #030508; border: 1px solid var(--border); border-radius: 8px; color: #38bdf8; font-family: var(--mono); font-size: 13px; font-weight: 800; padding: 6px; text-align: center;">
+              <button id="btnVerifyAddr" type="button" class="aux-btn" style="color: #38bdf8; border-color: rgba(0, 82, 255, 0.4); font-weight: 700;" onclick="requestAddressVerification()" disabled>
+                <span>👁️ Proyectar en ESP32</span>
+              </button>
+            </div>
+          </div>
+          <div id="verifiedAddrResult" style="display: none; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; padding: 8px 12px; background: rgba(0, 0, 0, 0.5); border-radius: 8px; border: 1px solid rgba(0, 82, 255, 0.3);">
+            <div style="font-size: 11px; font-family: var(--mono); color: #38bdf8; word-break: break-all;">
+              <span style="color: var(--success); font-weight: 800; margin-right: 6px;">OLED ✓</span><span id="verifiedAddrText"></span>
+            </div>
+            <button type="button" class="aux-btn" style="padding: 3px 10px; font-size: 11px;" onclick="copyVerifiedAddress()">Copiar</button>
+          </div>
+        </div>
+
         <!-- PSBT WORKBENCH -->
         <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 6px;">
           <div style="display: flex; align-items: center; justify-content: space-between;">
@@ -1268,6 +1292,8 @@
       document.getElementById("btnSign").disabled = false;
       const btnTab = document.getElementById("btnZpubTab");
       if (btnTab) btnTab.disabled = false;
+      const bV = document.getElementById("btnVerifyAddr");
+      if (bV) bV.disabled = false;
 
       if (mode === 'ble') {
         document.getElementById("btnBle").classList.add("active");
@@ -1294,6 +1320,11 @@
 
       const btnTab = document.getElementById("btnZpubTab");
       if (btnTab) btnTab.disabled = true;
+
+      const bV = document.getElementById("btnVerifyAddr");
+      if (bV) bV.disabled = true;
+      const resBox = document.getElementById("verifiedAddrResult");
+      if (resBox) resBox.style.display = "none";
 
       const bBle = document.getElementById("btnBle");
       bBle.classList.remove("active");
@@ -1527,6 +1558,25 @@
         } catch (err) {}
 
         log("✅ Transacción firmada recibida correctamente.");
+      } else if (line.startsWith("ADDR:")) {
+        // Formato devuelto por ESP32: ADDR:<change>:<idx>:<address>
+        const parts = line.split(":");
+        if (parts.length >= 4) {
+          const change = parts[1];
+          const idx = parts[2];
+          const addr = parts.slice(3).join(":").trim();
+          lastVerifiedAddr = addr;
+          const box = document.getElementById("verifiedAddrResult");
+          const txt = document.getElementById("verifiedAddrText");
+          if (box && txt) {
+            txt.textContent = `#${idx}${change === '1' ? ' (cambio)' : ''}: ${addr}`;
+            box.style.display = "flex";
+          }
+          log(`✅ Dirección #${idx} confirmada y proyectada en pantalla OLED: ${addr}`);
+        }
+      } else if (line === "ERROR:BUSY_SIGNING") {
+        alert("⚠️ El ESP32 está ocupado revisando o firmando una transacción. Espera a terminar o cancela en el dispositivo.");
+        log("⚠️ No se puede auditar dirección mientras el dispositivo está firmando.");
       } else if (line.startsWith("ZPUB:")) {
         const zpub = line.substring(5).trim();
         navigator.clipboard.writeText(zpub);
@@ -1558,6 +1608,23 @@
       document.getElementById("resultBox").style.display = "none";
       log(`${errCode}: Inputs del formulario preservados para reintento.`);
       alert(msg);
+    }
+
+    let lastVerifiedAddr = "";
+    function requestAddressVerification() {
+      const input = document.getElementById("verifyIndexInput");
+      let idx = parseInt(input.value);
+      if (isNaN(idx) || idx < 0) idx = 0;
+      if (idx > 99) idx = 99;
+      input.value = idx;
+      log(`Solicitando auditar dirección #${idx} en pantalla OLED del ESP32...`);
+      sendData(`VERIFY_ADDR:${idx}\n`);
+    }
+
+    function copyVerifiedAddress() {
+      if (!lastVerifiedAddr) return;
+      navigator.clipboard.writeText(lastVerifiedAddr);
+      alert("Dirección verificada copiada al portapapeles:\n\n" + lastVerifiedAddr);
     }
 
     async function fetchZpub() {
